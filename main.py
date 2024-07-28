@@ -124,8 +124,8 @@ def parse_list_file(link, output_directory):
         df['pattern'] = df['pattern'].replace(MAP_DICT)  # 替换pattern为字典中的值
         os.makedirs(output_directory, exist_ok=True)  # 创建自定义文件夹
 
-        result_rules = {"version": 2, "rules": []}
-        ip_rules = {"version": 2, "rules": []}  # 存储IP类型的规则
+        result_rules = {"version": 1, "rules": []}
+        ip_rules = {"version": 1, "rules": []}  # 存储IP类型的规则
         domain_entries = []
 
         for pattern, addresses in df.groupby('pattern')['address'].apply(list).to_dict().items():
