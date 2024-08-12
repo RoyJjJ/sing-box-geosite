@@ -125,53 +125,40 @@ def parse_list_file(link, output_directory):
         os.makedirs(output_directory, exist_ok=True)  # 创建自定义文件夹
 
         result_rules = {"version": 1, "rules": []}
-        ip_rules = {"version": 1, "rules": []}  # 存储IP类型的规则
         domain_entries = []
-
         for pattern, addresses in df.groupby('pattern')['address'].apply(list).to_dict().items():
             if pattern == 'domain_suffix':
                 rule_entry = {pattern: [address.strip() for address in addresses]}
                 result_rules["rules"].append(rule_entry)
+                # domain_entries.extend([address.strip() for address in addresses])  # 1.9以下的版本需要额外处理 domain_suffix
             elif pattern == 'domain':
                 domain_entries.extend([address.strip() for address in addresses])
-            elif pattern == 'ip_cidr':  # 处理IP类型的规则
-                rule_entry = {pattern: [address.strip() for address in addresses]}
-                ip_rules["rules"].append(rule_entry)
             else:
                 rule_entry = {pattern: [address.strip() for address in addresses]}
                 result_rules["rules"].append(rule_entry)
-
         # 删除 'domain_entries' 中的重复值
         domain_entries = list(set(domain_entries))
         if domain_entries:
             result_rules["rules"].insert(0, {'domain': domain_entries})
 
-        # 使用 output_directory 拼接完整路径
-        base_name = os.path.basename(link).split('.')[0]
-        general_file_name = os.path.join(output_directory, f"{base_name}_general.json")
-        ip_file_name = os.path.join(output_directory, f"{base_name}_ip.json")
+        # 处理逻辑规则
+        """
+        if rules_list[0] != "[]":
+            result_rules["rules"].extend(rules_list[0])
+        """
 
-        # 保存通用规则到 JSON 文件
-        with open(general_file_name, 'w', encoding='utf-8') as output_file:
+        # 使用 output_directory 拼接完整路径
+        file_name = os.path.join(output_directory, f"{os.path.basename(link).split('.')[0]}.json")
+        with open(file_name, 'w', encoding='utf-8') as output_file:
             result_rules_str = json.dumps(sort_dict(result_rules), ensure_ascii=False, indent=2)
             result_rules_str = result_rules_str.replace('\\\\', '\\')
             output_file.write(result_rules_str)
 
-        # 保存 IP 规则到 JSON 文件
-        with open(ip_file_name, 'w', encoding='utf-8') as output_file:
-            ip_rules_str = json.dumps(sort_dict(ip_rules), ensure_ascii=False, indent=2)
-            ip_rules_str = ip_rules_str.replace('\\\\', '\\')
-            output_file.write(ip_rules_str)
-
-        # 编译成 .srs 文件
-        general_srs_path = general_file_name.replace(".json", ".srs")
-        ip_srs_path = ip_file_name.replace(".json", ".srs")
-        os.system(f"sing-box rule-set compile --output {general_srs_path} {general_file_name}")
-        os.system(f"sing-box rule-set compile --output {ip_srs_path} {ip_file_name}")
-
-        return general_file_name, ip_file_name
-    except Exception as e:
-        print(f'获取链接出错，已跳过：{link}, 错误：{str(e)}')
+        srs_path = file_name.replace(".json", ".srs")
+        os.system(f"sing-box rule-set compile --output {srs_path} {file_name}")
+        return file_name
+    except:
+        print(f'获取链接出错，已跳过：{link}')
         pass
 
 # 读取 links.txt 中的每个链接并生成对应的 JSON 文件
@@ -184,7 +171,8 @@ output_dir = "./"
 result_file_names = []
 
 for link in links:
-    result_file_names.extend(parse_list_file(link, output_directory=output_dir))
+    result_file_name = parse_list_file(link, output_directory=output_dir)
+    result_file_names.append(result_file_name)
 
 # 打印生成的文件名
 # for file_name in result_file_names:
